@@ -1,25 +1,21 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { getYoutubeSdkObject } from "@/services/youtube-sdk";
+import { getPlaylists } from "@/services/actions/youtube/get-playlists";
 
 export default async function Page() {
-  const youtube = await getYoutubeSdkObject();
-  if (!youtube) redirect("/login");
+  const { error, data: playlists } = await getPlaylists();
 
-  const playlists = await youtube.playlists.list({
-    part: ["snippet"],
-    mine: true,
-  });
+  if (error) redirect("/auth/sign-out");
+  if (!playlists) redirect("/");
+  if (playlists.length === 0) return <div>No playlists found</div>;
 
   return (
     <div>
-      <h1>Manage playlists</h1>
-      {playlists?.data?.items?.map((playlist) => (
+      <h1 className="text-2xl">Manage playlists</h1>
+      {playlists.map((playlist) => (
         <div key={playlist.id}>
-          <h2>
-            <Link href={`/manage/${playlist.id}`}>
-              {playlist.snippet?.title}
-            </Link>
+          <h2 className="text-xl">
+            <Link href={`/manage/${playlist.id}`}>{playlist.title}</Link>
           </h2>
         </div>
       ))}

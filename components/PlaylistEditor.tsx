@@ -4,7 +4,6 @@ import { useState } from "react";
 import {
   DndContext,
   DragOverlay,
-  closestCorners,
   KeyboardSensor,
   PointerSensor,
   useSensor,
@@ -12,6 +11,7 @@ import {
   DragOverEvent,
   DragEndEvent,
   DragStartEvent,
+  closestCenter,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -34,6 +34,8 @@ type PlaylistEditorProps = {
 export default function PlaylistEditor({ playlistId }: PlaylistEditorProps) {
   const { playlist, bag, initialItemsOrder, moveItem, resetPlaylist } =
     usePlaylistStore((state) => state);
+
+  console.log({ playlist, bag });
 
   const [activeItem, setActiveItem] = useState<PlaylistItem | null>(null);
   const [isPlaylistUpdating, setIsPlaylistUpdating] = useState(false);
@@ -120,6 +122,55 @@ export default function PlaylistEditor({ playlistId }: PlaylistEditorProps) {
     setActiveItem(null);
   };
 
+  const customCollisionDetection = (
+    args: Parameters<typeof closestCenter>[0]
+  ) => {
+    const { collisionRect, droppableContainers } = args;
+
+    const containerDroppables = Array.from(droppableContainers.values()).filter(
+      (container) =>
+        container.id === EditorContainers.playlist ||
+        container.id === EditorContainers.bag
+    );
+
+    let targetContainer: EditorContainer | null = null;
+
+    for (const container of containerDroppables) {
+      const containerRect = container.rect.current;
+      if (!containerRect) continue;
+
+      if (
+        collisionRect.left < containerRect.right &&
+        collisionRect.right > containerRect.left &&
+        collisionRect.top < containerRect.bottom &&
+        collisionRect.bottom > containerRect.top
+      ) {
+        targetContainer = container.id as EditorContainer;
+        break;
+      }
+    }
+
+    if (!targetContainer) {
+      return closestCenter(args);
+    }
+
+    const targetItems =
+      targetContainer === EditorContainers.playlist ? playlist : bag;
+
+    if (targetItems.length === 0) {
+      return [{ id: targetContainer }];
+    }
+
+    const itemsInContainer = Array.from(droppableContainers.values()).filter(
+      (container) => targetItems.some((item) => item.id === container.id)
+    );
+
+    return closestCenter({
+      ...args,
+      droppableContainers: itemsInContainer,
+    });
+  };
+
   const handleUpdatePlaylist = async () => {
     if (bag.length > 0) {
       alert("You can't save changes while adding to the bag");
@@ -166,7 +217,7 @@ export default function PlaylistEditor({ playlistId }: PlaylistEditorProps) {
       <div className="w-full flex gap-4">
         <DndContext
           sensors={sensors}
-          collisionDetection={closestCorners}
+          collisionDetection={customCollisionDetection}
           onDragStart={handleDragStart}
           onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}

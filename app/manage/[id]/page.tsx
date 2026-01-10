@@ -21,8 +21,7 @@ export default async function Page({ params }: { params: { id: string } }) {
       <div className="flex flex-col items-center">
         <Link href="/manage">Back to manage playlists</Link>
         <h1 className="text-2xl">
-          Manage playlist:
-          <span className="font-bold">{playlist.title}</span>
+          Manage playlist: <span className="font-bold">{playlist.title}</span>
         </h1>
       </div>
 

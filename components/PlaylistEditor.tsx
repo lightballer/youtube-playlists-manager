@@ -35,8 +35,6 @@ export default function PlaylistEditor({ playlistId }: PlaylistEditorProps) {
   const { playlist, bag, initialItemsOrder, moveItem, resetPlaylist } =
     usePlaylistStore((state) => state);
 
-  console.log({ playlist, bag });
-
   const [activeItem, setActiveItem] = useState<PlaylistItem | null>(null);
   const [isPlaylistUpdating, setIsPlaylistUpdating] = useState(false);
 
@@ -193,9 +191,9 @@ export default function PlaylistEditor({ playlistId }: PlaylistEditorProps) {
     } catch (error) {
       console.error("Failed to update playlist", error);
       alert("Failed to update playlist");
-      window.location.reload();
     } finally {
       setIsPlaylistUpdating(false);
+      window.location.reload();
     }
   };
 

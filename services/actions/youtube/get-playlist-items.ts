@@ -13,7 +13,7 @@ export const getPlaylistItems = async (
     const youtube = await getYoutubeSdkObject();
     if (!youtube)
       return { error: new Error("Youtube SDK not found"), data: null };
-    let fetchedItems: youtube_v3.Schema$PlaylistItem[] = [];
+    const fetchedItems: Map<string, youtube_v3.Schema$PlaylistItem> = new Map();
 
     let nextPageToken = null;
     let isFetchingFinished = false;
@@ -35,10 +35,14 @@ export const getPlaylistItems = async (
         isFetchingFinished = true;
       }
       if (!data.items?.length) break;
-      fetchedItems = [...fetchedItems, ...data.items];
+      for (const item of data.items) {
+        fetchedItems.set(item.id!, item);
+      }
     }
 
-    const normalizedPlaylistItems = normalizePlaylistItems(fetchedItems);
+    const normalizedPlaylistItems = normalizePlaylistItems([
+      ...fetchedItems.values(),
+    ]);
     return {
       error: null,
       data: normalizedPlaylistItems,

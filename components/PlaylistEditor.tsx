@@ -236,7 +236,11 @@ export default function PlaylistEditor({ playlistId }: PlaylistEditorProps) {
             </SortableContext>
           </DroppableContainer>
 
-          <DroppableContainer id={EditorContainers.bag} title="Bag">
+          <DroppableContainer
+            id={EditorContainers.bag}
+            title="Bag"
+            className="sticky self-start top-4"
+          >
             <SortableContext
               items={bag.map((item) => item.id)}
               strategy={verticalListSortingStrategy}

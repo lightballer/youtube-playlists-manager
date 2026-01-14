@@ -6,9 +6,11 @@ import { PlaylistItem } from "@/types/playlist";
 const SortablePlaylistItem = ({
   id,
   item,
+  orderNumber,
 }: {
   id: string;
   item: PlaylistItem;
+  orderNumber?: number;
 }) => {
   const {
     attributes,
@@ -27,7 +29,7 @@ const SortablePlaylistItem = ({
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <PlaylistItemCard item={item} />
+      <PlaylistItemCard item={item} orderNumber={orderNumber} />
     </div>
   );
 };

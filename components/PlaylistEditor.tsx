@@ -26,6 +26,7 @@ import { Playlist, PlaylistItem } from "@/types/playlist";
 import { usePlaylistStore } from "@/services/providers/playlist.provider";
 import { updatePlaylist } from "@/services/actions/youtube/update-playlist";
 import { EditorContainer, EditorContainers } from "@/types/editor";
+import { useDialog } from "@/hooks/useDialog";
 
 type PlaylistEditorProps = {
   playlistId: Playlist["id"];
@@ -37,9 +38,14 @@ export default function PlaylistEditor({ playlistId }: PlaylistEditorProps) {
 
   const [activeItem, setActiveItem] = useState<PlaylistItem | null>(null);
   const [isPlaylistUpdating, setIsPlaylistUpdating] = useState(false);
+  const { showError, showSuccess, showWarning } = useDialog();
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
@@ -131,6 +137,9 @@ export default function PlaylistEditor({ playlistId }: PlaylistEditorProps) {
         container.id === EditorContainers.bag
     );
 
+    const centerX = collisionRect.left + collisionRect.width / 2;
+    const centerY = collisionRect.top + collisionRect.height / 2;
+
     let targetContainer: EditorContainer | null = null;
 
     for (const container of containerDroppables) {
@@ -138,10 +147,10 @@ export default function PlaylistEditor({ playlistId }: PlaylistEditorProps) {
       if (!containerRect) continue;
 
       if (
-        collisionRect.left < containerRect.right &&
-        collisionRect.right > containerRect.left &&
-        collisionRect.top < containerRect.bottom &&
-        collisionRect.bottom > containerRect.top
+        centerX >= containerRect.left &&
+        centerX <= containerRect.right &&
+        centerY >= containerRect.top &&
+        centerY <= containerRect.bottom
       ) {
         targetContainer = container.id as EditorContainer;
         break;
@@ -171,11 +180,14 @@ export default function PlaylistEditor({ playlistId }: PlaylistEditorProps) {
 
   const handleUpdatePlaylist = async () => {
     if (bag.length > 0) {
-      alert("You can't save changes while adding to the bag");
+      showWarning(
+        "You can't save changes while adding to the bag",
+        "Cannot Save"
+      );
       return;
     }
     if (playlist.length === 0) {
-      alert("You can't save an empty playlist");
+      showWarning("You can't save an empty playlist", "Cannot Save");
       return;
     }
 
@@ -187,10 +199,10 @@ export default function PlaylistEditor({ playlistId }: PlaylistEditorProps) {
         initialItemsOrder
       );
       if (error) throw error;
-      alert("Playlist updated successfully");
+      showSuccess("Playlist updated successfully");
     } catch (error) {
       console.error("Failed to update playlist", error);
-      alert("Failed to update playlist");
+      showError("Failed to update playlist. Please try again.");
     } finally {
       setIsPlaylistUpdating(false);
       window.location.reload();
@@ -205,14 +217,22 @@ export default function PlaylistEditor({ playlistId }: PlaylistEditorProps) {
 
   return (
     <div className="flex flex-col gap-4 min-h-150 w-full justify-center items-end">
-      <div className="flex flex-row gap-4">
-        <button onClick={handleResetPlaylist}>Reset</button>
-        <button onClick={handleUpdatePlaylist} className="bg-amber-500!">
+      <div className="flex flex-row gap-4 mb-2">
+        <button
+          onClick={handleResetPlaylist}
+          className="bg-slate-600 hover:bg-slate-700 text-white font-medium px-6 py-3 rounded-xl transition-all duration-300 shadow-[0_0_20px_rgba(71,85,105,0.3)] hover:shadow-[0_0_30px_rgba(71,85,105,0.5)] hover:-translate-y-0.5"
+        >
+          Reset
+        </button>
+        <button
+          onClick={handleUpdatePlaylist}
+          className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-3 rounded-xl transition-all duration-300 shadow-[0_0_20px_rgba(37,99,235,0.3)] hover:shadow-[0_0_30px_rgba(37,99,235,0.5)] hover:-translate-y-0.5"
+        >
           Save changes
         </button>
       </div>
 
-      <div className="w-full flex gap-4">
+      <div className="w-full flex flex-col md:flex-row gap-4">
         <DndContext
           sensors={sensors}
           collisionDetection={customCollisionDetection}
@@ -223,13 +243,19 @@ export default function PlaylistEditor({ playlistId }: PlaylistEditorProps) {
           <DroppableContainer
             id={EditorContainers.playlist}
             title="Current Playlist"
+            className="md:w-1/2"
           >
             <SortableContext
               items={playlist.map((item) => item.id)}
               strategy={verticalListSortingStrategy}
             >
-              {playlist.map((item) => (
-                <SortablePlaylistItem key={item.id} id={item.id} item={item} />
+              {playlist.map((item, index) => (
+                <SortablePlaylistItem
+                  key={item.id}
+                  id={item.id}
+                  item={item}
+                  orderNumber={index + 1}
+                />
               ))}
             </SortableContext>
           </DroppableContainer>
@@ -237,14 +263,19 @@ export default function PlaylistEditor({ playlistId }: PlaylistEditorProps) {
           <DroppableContainer
             id={EditorContainers.bag}
             title="Bag"
-            className="sticky self-start top-4"
+            className="md:w-1/2 md:sticky md:self-start md:top-24"
           >
             <SortableContext
               items={bag.map((item) => item.id)}
               strategy={verticalListSortingStrategy}
             >
-              {bag.map((item) => (
-                <SortablePlaylistItem key={item.id} id={item.id} item={item} />
+              {bag.map((item, index) => (
+                <SortablePlaylistItem
+                  key={item.id}
+                  id={item.id}
+                  item={item}
+                  orderNumber={index + 1}
+                />
               ))}
             </SortableContext>
           </DroppableContainer>

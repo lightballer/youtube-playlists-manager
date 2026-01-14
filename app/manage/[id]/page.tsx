@@ -17,15 +17,42 @@ export default async function Page({ params }: { params: { id: string } }) {
   if (!playlistItems) return <div>No items found</div>;
 
   return (
-    <div className="flex flex-col gap-4 w-full">
-      <div className="flex flex-col items-center">
-        <Link href="/manage">Back to manage playlists</Link>
-        <h1 className="text-2xl">
-          Manage playlist: <span className="font-bold">{playlist.title}</span>
-        </h1>
+    <div className="w-full">
+      <div className="sticky top-0 backdrop-blur-xl bg-white/5 z-10 py-4 border-b border-white/10 mb-6 shadow-lg">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="flex items-center gap-4">
+            <Link
+              href="/manage"
+              className="text-text-secondary hover:text-cyan-500 transition-colors inline-flex items-center gap-2"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                />
+              </svg>
+              <span className="hidden md:inline">Back to playlists</span>
+            </Link>
+
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl font-semibold text-text-primary truncate">
+                {playlist.title}
+              </h1>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <PlaylistEditorWrapper playlistId={id} items={playlistItems} />
+      <div className="max-w-7xl mx-auto px-6 pb-12">
+        <PlaylistEditorWrapper playlistId={id} items={playlistItems} />
+      </div>
     </div>
   );
 }

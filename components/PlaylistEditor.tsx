@@ -22,6 +22,8 @@ import {
 import DroppableContainer from "./DroppableContainer";
 import SortablePlaylistItem from "./SortablePlaylistItem";
 import PlaylistItemCard from "./PlaylistItemCard";
+import LoadingOverlay from "./LoadingOverlay";
+import Spinner from "./Spinner";
 import { Playlist, PlaylistItem } from "@/types/playlist";
 import { usePlaylistStore } from "@/services/providers/playlist.provider";
 import { updatePlaylist } from "@/services/actions/youtube/update-playlist";
@@ -29,6 +31,7 @@ import { EditorContainer, EditorContainers } from "@/types/editor";
 import { useDialog } from "@/hooks/useDialog";
 import { extractVideoId } from "@/utils/youtube-url-parser";
 import { getVideoDetails } from "@/services/actions/youtube/get-video-details";
+import { getPlaylistItems } from "@/services/actions/youtube/get-playlist-items";
 
 type PlaylistEditorProps = {
   playlistId: Playlist["id"];
@@ -43,6 +46,7 @@ export default function PlaylistEditor({ playlistId }: PlaylistEditorProps) {
     resetPlaylist,
     addNewItem,
     markAsDeleted,
+    loadPlaylist,
   } = usePlaylistStore((state) => state);
 
   const [activeItem, setActiveItem] = useState<PlaylistItem | null>(null);
@@ -213,13 +217,20 @@ export default function PlaylistEditor({ playlistId }: PlaylistEditorProps) {
         initialItemsOrder
       );
       if (error) throw error;
+
+      const { data: freshItems, error: fetchError } = await getPlaylistItems(
+        playlistId
+      );
+      if (fetchError || !freshItems) {
+        throw fetchError || new Error("Failed to fetch updated playlist");
+      }
+      loadPlaylist(freshItems);
       showSuccess("Playlist updated successfully");
     } catch (error) {
       console.error("Failed to update playlist", error);
       showError("Failed to update playlist. Please try again.");
     } finally {
       setIsPlaylistUpdating(false);
-      window.location.reload();
     }
   };
 
@@ -256,7 +267,8 @@ export default function PlaylistEditor({ playlistId }: PlaylistEditorProps) {
     setUrlInputValue("");
   };
 
-  if (isPlaylistUpdating) return <div>Updating playlist...</div>;
+  if (isPlaylistUpdating)
+    return <LoadingOverlay message="Saving playlist..." />;
 
   return (
     <div className="flex flex-col gap-4 min-h-150 w-full justify-center items-end">
@@ -341,7 +353,14 @@ export default function PlaylistEditor({ playlistId }: PlaylistEditorProps) {
                     disabled={isLoadingVideo || !urlInputValue.trim()}
                     className="flex-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-600/50 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
                   >
-                    {isLoadingVideo ? "Loading..." : "Add"}
+                    {isLoadingVideo ? (
+                      <span className="flex items-center gap-2">
+                        <Spinner size="sm" />
+                        <span>Loading</span>
+                      </span>
+                    ) : (
+                      "Add"
+                    )}
                   </button>
                   <button
                     onClick={handleCancelAddItem}

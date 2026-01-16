@@ -27,17 +27,29 @@ import { usePlaylistStore } from "@/services/providers/playlist.provider";
 import { updatePlaylist } from "@/services/actions/youtube/update-playlist";
 import { EditorContainer, EditorContainers } from "@/types/editor";
 import { useDialog } from "@/hooks/useDialog";
+import { extractVideoId } from "@/utils/youtube-url-parser";
+import { getVideoDetails } from "@/services/actions/youtube/get-video-details";
 
 type PlaylistEditorProps = {
   playlistId: Playlist["id"];
 };
 
 export default function PlaylistEditor({ playlistId }: PlaylistEditorProps) {
-  const { playlist, bag, initialItemsOrder, moveItem, resetPlaylist } =
-    usePlaylistStore((state) => state);
+  const {
+    playlist,
+    bag,
+    initialItemsOrder,
+    moveItem,
+    resetPlaylist,
+    addNewItem,
+    markAsDeleted,
+  } = usePlaylistStore((state) => state);
 
   const [activeItem, setActiveItem] = useState<PlaylistItem | null>(null);
   const [isPlaylistUpdating, setIsPlaylistUpdating] = useState(false);
+  const [isAddingItem, setIsAddingItem] = useState(false);
+  const [urlInputValue, setUrlInputValue] = useState("");
+  const [isLoadingVideo, setIsLoadingVideo] = useState(false);
   const { showError, showSuccess, showWarning } = useDialog();
 
   const sensors = useSensors(
@@ -179,14 +191,16 @@ export default function PlaylistEditor({ playlistId }: PlaylistEditorProps) {
   };
 
   const handleUpdatePlaylist = async () => {
-    if (bag.length > 0) {
+    const activeBagItems = bag.filter((item) => !item.isDeleted);
+    if (activeBagItems.length > 0) {
       showWarning(
         "You can't save changes while adding to the bag",
         "Cannot Save"
       );
       return;
     }
-    if (playlist.length === 0) {
+    const activePlaylistItems = playlist.filter((item) => !item.isDeleted);
+    if (activePlaylistItems.length === 0) {
       showWarning("You can't save an empty playlist", "Cannot Save");
       return;
     }
@@ -211,6 +225,35 @@ export default function PlaylistEditor({ playlistId }: PlaylistEditorProps) {
 
   const handleResetPlaylist = async () => {
     resetPlaylist();
+  };
+
+  const handleAddNewItem = async () => {
+    const videoId = extractVideoId(urlInputValue);
+    if (!videoId) {
+      showError("Invalid YouTube URL. Please paste a valid video link.");
+      return;
+    }
+
+    setIsLoadingVideo(true);
+    try {
+      const { data, error } = await getVideoDetails(videoId);
+      if (error || !data) {
+        showError("Failed to fetch video details. Please try again.");
+        return;
+      }
+      addNewItem(data);
+      setUrlInputValue("");
+      setIsAddingItem(false);
+    } catch {
+      showError("Failed to add video. Please try again.");
+    } finally {
+      setIsLoadingVideo(false);
+    }
+  };
+
+  const handleCancelAddItem = () => {
+    setIsAddingItem(false);
+    setUrlInputValue("");
   };
 
   if (isPlaylistUpdating) return <div>Updating playlist...</div>;
@@ -246,17 +289,22 @@ export default function PlaylistEditor({ playlistId }: PlaylistEditorProps) {
             className="md:w-1/2"
           >
             <SortableContext
-              items={playlist.map((item) => item.id)}
+              items={playlist
+                .filter((item) => !item.isDeleted)
+                .map((item) => item.id)}
               strategy={verticalListSortingStrategy}
             >
-              {playlist.map((item, index) => (
-                <SortablePlaylistItem
-                  key={item.id}
-                  id={item.id}
-                  item={item}
-                  orderNumber={index + 1}
-                />
-              ))}
+              {playlist
+                .filter((item) => !item.isDeleted)
+                .map((item, index) => (
+                  <SortablePlaylistItem
+                    key={item.id}
+                    id={item.id}
+                    item={item}
+                    orderNumber={index + 1}
+                    onDelete={() => markAsDeleted(item.id)}
+                  />
+                ))}
             </SortableContext>
           </DroppableContainer>
 
@@ -264,19 +312,65 @@ export default function PlaylistEditor({ playlistId }: PlaylistEditorProps) {
             id={EditorContainers.bag}
             title="Bag"
             className="md:w-1/2 md:sticky md:self-start md:top-24"
+            headerAction={
+              !isAddingItem && (
+                <button
+                  onClick={() => setIsAddingItem(true)}
+                  className="px-3 py-1.5 text-sm border border-dashed border-white/20 rounded-lg text-white/60 hover:text-white hover:border-emerald-500/50 hover:bg-emerald-500/10 transition-all duration-200 flex items-center gap-1.5"
+                >
+                  <span className="text-base">+</span>
+                  <span>Add from URL</span>
+                </button>
+              )
+            }
           >
+            {isAddingItem && (
+              <div className="flex flex-col gap-2 mb-2 p-3 border border-emerald-500/30 rounded-xl bg-emerald-500/5">
+                <input
+                  type="text"
+                  value={urlInputValue}
+                  onChange={(e) => setUrlInputValue(e.target.value)}
+                  placeholder="Paste YouTube URL..."
+                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-emerald-500/50"
+                  disabled={isLoadingVideo}
+                  autoFocus
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleAddNewItem}
+                    disabled={isLoadingVideo || !urlInputValue.trim()}
+                    className="flex-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-600/50 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
+                  >
+                    {isLoadingVideo ? "Loading..." : "Add"}
+                  </button>
+                  <button
+                    onClick={handleCancelAddItem}
+                    disabled={isLoadingVideo}
+                    className="px-4 py-2 bg-slate-600 hover:bg-slate-700 disabled:bg-slate-600/50 text-white font-medium rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
             <SortableContext
-              items={bag.map((item) => item.id)}
+              items={bag
+                .filter((item) => !item.isDeleted)
+                .map((item) => item.id)}
               strategy={verticalListSortingStrategy}
             >
-              {bag.map((item, index) => (
-                <SortablePlaylistItem
-                  key={item.id}
-                  id={item.id}
-                  item={item}
-                  orderNumber={index + 1}
-                />
-              ))}
+              {bag
+                .filter((item) => !item.isDeleted)
+                .map((item, index) => (
+                  <SortablePlaylistItem
+                    key={item.id}
+                    id={item.id}
+                    item={item}
+                    orderNumber={index + 1}
+                    onDelete={() => markAsDeleted(item.id)}
+                  />
+                ))}
             </SortableContext>
           </DroppableContainer>
 

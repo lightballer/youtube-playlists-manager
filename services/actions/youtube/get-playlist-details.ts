@@ -23,6 +23,7 @@ export const getPlaylistDetails = async (
     const normalizedPlaylist: Playlist = {
       id,
       title: playlist.items[0].snippet.title ?? null,
+      thumbnailUrl: playlist.items[0].snippet.thumbnails?.medium?.url ?? null,
     };
 
     return {

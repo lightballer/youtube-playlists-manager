@@ -17,6 +17,8 @@ export type PlaylistActions = {
     destinationIndex: number
   ) => void;
   resetPlaylist: () => void;
+  addNewItem: (item: PlaylistItem) => void;
+  markAsDeleted: (itemId: PlaylistItem["id"]) => void;
 };
 
 export type PlaylistStore = PlaylistState & PlaylistActions;
@@ -47,55 +49,73 @@ export const createPlaylistStore = (
       destinationIndex
     ) =>
       set((state) => {
-        const newSource = [
-          ...(sourceContainer === EditorContainers.playlist
-            ? state.playlist
-            : state.bag),
-        ];
+        const getArray = (container: EditorContainer) =>
+          container === EditorContainers.playlist ? state.playlist : state.bag;
+
+        const newSource = [...getArray(sourceContainer)];
         const newDest =
           sourceContainer === destinationContainer
             ? newSource
-            : [
-                ...(destinationContainer === EditorContainers.playlist
-                  ? state.playlist
-                  : state.bag),
-              ];
+            : [...getArray(destinationContainer)];
 
         const [item] = newSource.splice(sourceIndex, 1);
         if (!item) return state;
 
         newDest.splice(destinationIndex, 0, item);
 
-        return {
-          playlist:
-            sourceContainer === EditorContainers.playlist
-              ? newSource
-              : destinationContainer === EditorContainers.playlist
-              ? newDest
-              : state.playlist,
-          bag:
-            sourceContainer === EditorContainers.bag
-              ? newSource
-              : destinationContainer === EditorContainers.bag
-              ? newDest
-              : state.bag,
-        };
+        const result: Partial<PlaylistState> = {};
+
+        if (sourceContainer === EditorContainers.playlist) {
+          result.playlist = newSource;
+        } else {
+          result.bag = newSource;
+        }
+
+        if (sourceContainer !== destinationContainer) {
+          if (destinationContainer === EditorContainers.playlist) {
+            result.playlist = newDest;
+          } else {
+            result.bag = newDest;
+          }
+        }
+
+        return result;
       }),
     resetPlaylist: () =>
       set((state) => {
-        const unsotrtedPlaylist = [...state.playlist, ...state.bag];
-        const sortedPlaylist = unsotrtedPlaylist.sort((a, b) => {
-          const aIndex = state.initialItemsOrder.get(a.id);
-          const bIndex = state.initialItemsOrder.get(b.id);
+        const allItems = [...state.playlist, ...state.bag];
+        const existingItems = allItems.filter((item) =>
+          state.initialItemsOrder.has(item.id)
+        );
+        const sortedPlaylist = existingItems
+          .map((item) => ({ ...item, isDeleted: false }))
+          .sort((a, b) => {
+            const aIndex = state.initialItemsOrder.get(a.id);
+            const bIndex = state.initialItemsOrder.get(b.id);
 
-          if (aIndex === undefined || bIndex === undefined) return 0;
+            if (aIndex === undefined || bIndex === undefined) return 0;
 
-          return aIndex - bIndex;
-        });
+            return aIndex - bIndex;
+          });
 
         return {
           playlist: sortedPlaylist,
           bag: [],
+        };
+      }),
+    addNewItem: (item: PlaylistItem) =>
+      set((state) => ({
+        bag: [...state.bag, item],
+      })),
+    markAsDeleted: (itemId: PlaylistItem["id"]) =>
+      set((state) => {
+        const updateItem = (items: PlaylistItem[]) =>
+          items.map((item) =>
+            item.id === itemId ? { ...item, isDeleted: true } : item
+          );
+        return {
+          playlist: updateItem(state.playlist),
+          bag: updateItem(state.bag),
         };
       }),
   }));

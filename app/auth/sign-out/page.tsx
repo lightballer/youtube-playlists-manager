@@ -1,14 +1,16 @@
 "use client";
 
 import { signOut } from "next-auth/react";
-import { redirect } from "next/navigation";
 import { useEffect } from "react";
 
 export default function Page() {
   useEffect(() => {
-    signOut();
-    redirect("/");
+    signOut({ callbackUrl: "/" });
   }, []);
 
-  return null;
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-text-secondary">Signing out...</div>
+    </div>
+  );
 }

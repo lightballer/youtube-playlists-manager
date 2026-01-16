@@ -66,7 +66,7 @@ export default function Page() {
         </Link>
 
         <button
-          onClick={() => signOut()}
+          onClick={() => signOut({ callbackUrl: "/auth/login" })}
           className="backdrop-blur-md bg-white/5 border border-white/10 hover:bg-white/8 hover:border-cyan-500/30 text-text-primary font-medium px-6 py-3 rounded-xl transition-all duration-300"
         >
           Sign out

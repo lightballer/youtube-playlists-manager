@@ -64,5 +64,7 @@ const normalizePlaylistItems = (
     videoId: item.snippet?.resourceId?.videoId ?? null,
     title: item.snippet?.title ?? null,
     thumbnailUrl: item.snippet?.thumbnails?.default?.url ?? null,
+    isNew: false,
+    isDeleted: false,
   }));
 };

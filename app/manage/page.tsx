@@ -1,12 +1,23 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getPlaylists } from "@/services/actions/youtube/get-playlists";
+import ErrorDisplay from "@/components/ErrorDisplay";
+import Image from "next/image";
 
 export default async function Page() {
   const { error, data: playlists } = await getPlaylists();
 
-  if (error) redirect("/auth/sign-out");
-  if (!playlists) redirect("/");
+  if (error?.message === "Youtube SDK not found") {
+    redirect("/auth/sign-out");
+  }
+
+  if (error) {
+    return <ErrorDisplay error={error} />;
+  }
+
+  if (!playlists) {
+    redirect("/auth/sign-out");
+  }
 
   if (playlists.length === 0) {
     return (
@@ -93,21 +104,31 @@ export default async function Page() {
           <Link key={playlist.id} href={`/manage/${playlist.id}`}>
             <div className="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl p-8 transition-all duration-300 cursor-pointer group h-full shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] hover:bg-white/8 hover:shadow-[0_0_40px_rgba(6,182,212,0.4)] hover:scale-[1.02]">
               <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-linear-to-br from-cyan-500 to-teal-500 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform shadow-[0_0_20px_rgba(6,182,212,0.3)]">
-                  <svg
-                    className="w-6 h-6 text-white"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
-                    />
-                  </svg>
-                </div>
+                {playlist.thumbnailUrl ? (
+                  <Image
+                    width={64}
+                    height={64}
+                    src={playlist.thumbnailUrl}
+                    alt={playlist.title ?? "Playlist cover"}
+                    className="w-16 h-16 rounded-lg object-cover shrink-0 group-hover:scale-110 transition-transform shadow-[0_0_20px_rgba(6,182,212,0.3)]"
+                  />
+                ) : (
+                  <div className="w-16 h-16 bg-linear-to-br from-cyan-500 to-teal-500 rounded-lg flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform shadow-[0_0_20px_rgba(6,182,212,0.3)]">
+                    <svg
+                      className="w-8 h-8 text-white"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
+                      />
+                    </svg>
+                  </div>
+                )}
 
                 <div className="flex-1 min-w-0">
                   <h2 className="text-xl font-semibold text-text-primary mb-1 truncate">

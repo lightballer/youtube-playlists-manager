@@ -7,10 +7,12 @@ const SortablePlaylistItem = ({
   id,
   item,
   orderNumber,
+  onDelete,
 }: {
   id: string;
   item: PlaylistItem;
   orderNumber?: number;
+  onDelete?: () => void;
 }) => {
   const {
     attributes,
@@ -29,7 +31,11 @@ const SortablePlaylistItem = ({
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <PlaylistItemCard item={item} orderNumber={orderNumber} />
+      <PlaylistItemCard
+        item={item}
+        orderNumber={orderNumber}
+        onDelete={onDelete}
+      />
     </div>
   );
 };

@@ -47,5 +47,6 @@ const normalizePlaylists = (
   return playlists.map((item) => ({
     id: item.id!,
     title: item.snippet?.title ?? null,
+    thumbnailUrl: item.snippet?.thumbnails?.medium?.url ?? null,
   }));
 };
